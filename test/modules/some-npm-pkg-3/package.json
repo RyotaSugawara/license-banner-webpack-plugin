@@ -1,0 +1,10 @@
+{
+  "name": "some-npm-pkg-3",
+  "version": "0.0.0",
+  "author": "ryo suga",
+  "license": "BSD",
+  "repository": {
+    "user": "git",
+    "url": "some url"
+  }
+}

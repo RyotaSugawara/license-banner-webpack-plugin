@@ -70,7 +70,7 @@ class LicenseBannerWebpackPlugin {
                 if (banner)
                   chunk.files.forEach(file => {
                     compilation.assets[file] = new ConcatSource(
-                      `/*\n${banner}\n */\n`,
+                      `/*\n${banner}\n*/\n`,
                       compilation.assets[file]
                     );
                   });
