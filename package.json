@@ -1,0 +1,29 @@
+{
+  "name": "license-banner-webpack-plugin",
+  "version": "0.0.0",
+  "description": "append license banner to bundle file.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/RyotaSugawara/license-banner-webpack-plugin.git"
+  },
+  "keywords": [
+    "webpack"
+  ],
+  "author": "Ryota Sugawara <ryo.suga.dev@gmail.com> (http://banseivlog.hatenablog.jp)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/RyotaSugawara/license-banner-webpack-plugin/issues"
+  },
+  "homepage": "https://github.com/RyotaSugawara/license-banner-webpack-plugin#readme",
+  "devDependencies": {
+    "lodash": "^4.17.4",
+    "webpack": "^2.2.1"
+  },
+  "dependencies": {
+    "webpack-sources": "^0.1.4"
+  }
+}
