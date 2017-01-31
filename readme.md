@@ -5,16 +5,16 @@ Insert the license text of the module used for each bundled file at the beginnin
 
 ## Install
 ```
-$ yarn add license-banner-webpack-plugin
+$ yarn add license-banner-webpack-plugin --dev
 # or
-$ npm install
+$ npm install license-banner-webpack-plugin --save-dev
 ```
 
 ## Usage
 Import the plugin module into webpack configuration.
 
 ```js
-const LicenseBannerPlugin = require('license-banner-webpack-pluin'); 
+const LicenseBannerPlugin = require('license-banner-webpack-pluin');
 ```
 
 Then use this plugin with some options.
@@ -34,7 +34,7 @@ Then output file has license banner like this.
 webpack@2.2.1
   license: MIT
   author: Tobias Koppers @sokra
-  repository: https://github.com/webpack/webpack.git: 
+  repository: https://github.com/webpack/webpack.git:
 (...and any other modules you use in your code)
 */
 ```
