@@ -5,16 +5,22 @@
 
 "use strict";
 
+var fs = require('fs');
+var path = require('path');
 var ConcatSource = require('webpack-sources').ConcatSource;
 
-function uniqueFilter(value, index, source) {
-  return source.indexOf(value) === index;
+function uniqueModuleFilter(module, index, source) {
+  return source.map(module => module.name).indexOf(module.name) === index;
+}
+
+function isArray(source) {
+  return Object.prototype.toString.call(source) === '[object Array]';
 }
 
 function isObject(source) {
   return typeof source === 'object'
     && source !== null
-    && Object.prototype.toString.call(source) !== '[object Array]';
+    && !isArray(source);
 }
 
 var UNKNOWN = 'UNKNOWN';
@@ -39,8 +45,8 @@ class LicenseBannerWebpackPlugin {
       options = getDefaultOptions();
     if (!isObject(options))
       throw new Error('LicenseBannerWebpackPlugin only takes an object argument.');
-    if (options.licensePattern && !(options.licensePattern instanceof RegExp))
-      throw new Error('LicenseBannerWebpackPlugin options.licensePattern only takes RegExp patterns.')
+    if (options.licenseDirectories && !isArray(options.licenseDirectories))
+      throw new Error('LicenseBannerWebpackPlugin options.licensePattern only takes Array.')
     if (options.licenseTemplate && typeof options.licenseTemplate !== 'string')
       throw new Error('LicenseBannerWebpackPlugin options.licenseTemplate only takes String.');
     this.options = Object.assign(
@@ -50,51 +56,66 @@ class LicenseBannerWebpackPlugin {
   }
 
   apply(compiler) {
+    var directories = this.options.licenseDirectories || [
+      path.join(compiler.context, 'node_modules')
+    ];
     compiler.plugin('compilation', compilation => {
       compilation.plugin('optimize-chunk-assets', (chunks, callback) => {
 
-        chunks.forEach(chunk => {
-          var modules = this.getModuleMap(chunk);
-          var banner = this.getLicenseBanner(modules);
-          if (banner) {
-            chunk.files
-              .forEach(file => {
-                console.log(`append license banner to ${file}\n`, banner); // eslint-disable-line no-console
-                compilation.assets[file] = new ConcatSource(
-                  `/* \n${banner}\n */\n`,
-                  compilation.assets[file]
-                );
+        Promise.all(
+          chunks.map(chunk => {
+            var modules = this.getModuleMap(chunk, directories);
+            return this.getLicenseBanner(modules)
+              .then(banner => {
+                if (banner)
+                  chunk.files.forEach(file => {
+                    compilation.assets[file] = new ConcatSource(
+                      `/*\n${banner}\n */\n`,
+                      compilation.assets[file]
+                    );
+                  });
               });
-          }
+          })
+        ).then(() => {
+          callback();
+        }, err => {
+          callback(err);
         });
 
-        callback();
       });
     });
   }
 
-  getModuleMap(chunk) {
-    var { licensePattern } = this.options;
-    return chunk.modules
-      .map(module => module.resource)
-      .filter(resource => licensePattern.test(resource))
-      .map(resource => {
-        var matches = resource.match(licensePattern);
-        var moduleName = resource
-          .split(matches[0])
-          .pop()
-          .split('/')[1];
-        return moduleName;
-      })
-      .filter(uniqueFilter);
+  getModuleMap(chunk, directories) {
+    return chunk.modules.map(module => {
+      return module.resource || '';
+    }).filter(resource => {
+      for (var dir of directories)
+        if (resource.startsWith(dir)) return true;
+      return false;
+    }).map(resource => {
+      for (var dir of directories) {
+        if (resource.startsWith(dir)) {
+          var name = resource.replace(dir, '').split('/')[1];
+          var directory = path.join(dir, name)
+          return {
+            name,
+            directory
+          };
+        }
+      }
+    }).filter(uniqueModuleFilter);
   }
 
   getLicenseBanner(modules) {
-    if (!modules.length) return '';
-    return modules.map(module => {
-      var license = this.getLicense(module);
-      return this.getLicenseText(license);
-    }).join('\n');
+    if (!modules.length) return Promise.resolve('');
+    return Promise.all(
+      modules.map(module => this.getLicense(module))
+    ).then(licenses => {
+      return licenses
+        .map(license => this.getLicenseText(license))
+        .join('\n');
+    });
   }
 
   getLicenseText(license) {
@@ -107,27 +128,65 @@ class LicenseBannerWebpackPlugin {
       .replace('$repository', license.repository);
   }
 
-  getLicense(moduleName) {
-    var license;
-    try {
-      var pkg = require(`${moduleName}/package.json`);
-      license = {
-        name: moduleName,
-        version: pkg.version,
-        author: this.getAuthorText(pkg.author),
-        license: pkg.license,
-        repository: this.getRepositoryText(pkg.repository),
-      };
-    } catch (e) {
-      license = {
-        name: moduleName,
-        version: UNKNOWN,
-        author: UNKNOWN,
-        license: UNKNOWN,
-        repository: UNKNOWN
-      };
-    }
-    return license;
+  getPackage(module) {
+    return new Promise((resolve, reject) => {
+      fs.readdir(module.directory, (err, files) => {
+        if (err) {
+          reject(err);
+        } else {
+          switch (true) {
+            case files.includes('package.json'):
+              resolve(this.getPackageJsonPkg(module));
+              break;
+            default:
+              reject('no package files exists');
+          }
+        }
+      });
+    });
+  }
+
+  getPackageJsonPkg(module) {
+    var pkg = require(path.join(module.directory, 'package.json'));
+    return {
+      name: pkg.name,
+      version: pkg.version,
+      author: this.getAuthorText(pkg.author),
+      license: pkg.license,
+      repository: this.getRepositoryText(pkg.repository)
+    };
+  }
+
+  getBowerJsonPkg(dir) {
+    var pkg = require(path.join(dir, 'bower.json'));
+    return {
+      name: pkg.name,
+      version: pkg.version,
+      author: (pkg.authors ? pkg.authors : []).join(', '),
+      license: pkg.license,
+      repository: this.getRepositoryText(pkg.repository)
+    };
+  }
+
+  getLicense(module) {
+    return this.getPackage(module)
+      .then(pkg => {
+        return {
+          name: pkg.name,
+          version: pkg.version,
+          author: this.getAuthorText(pkg.author),
+          license: pkg.license,
+          repository: this.getRepositoryText(pkg.repository),
+        };
+      }).catch(() => {
+        return {
+          name: module.name,
+          version: UNKNOWN,
+          author: UNKNOWN,
+          license: UNKNOWN,
+          repository: UNKNOWN
+        }
+      });
   }
 
   getRepositoryText(repository) {
