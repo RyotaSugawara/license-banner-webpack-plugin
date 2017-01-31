@@ -25,10 +25,10 @@ function isObject(source) {
 
 var UNKNOWN = 'UNKNOWN';
 var DEFAULT_LICENSE_TEMPLATE =
-`$name
+`$name@$version
   license: $license
   author: $author
-  version: $version`;
+  repository: $repository`;
 
 function getDefaultOptions() {
   return {
