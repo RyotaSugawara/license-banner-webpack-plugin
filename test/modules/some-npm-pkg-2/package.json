@@ -1,0 +1,11 @@
+{
+  "name": "some-npm-pkg-2",
+  "version": "0.0.0",
+  "author": {
+    "name": "ryo suga",
+    "email": "foo",
+    "url": "bar"
+  },
+  "license": "MIT",
+  "repository": "some url"
+}
