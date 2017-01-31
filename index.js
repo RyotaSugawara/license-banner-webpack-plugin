@@ -11,10 +11,10 @@ function uniqueFilter(value, index, source) {
   return source.indexOf(value) === index;
 }
 
-function isObject(T) {
-  return typeof T === 'object'
-    && T !== null
-    && Object.prototype.toString.call(T) !== '[object Array]';
+function isObject(source) {
+  return typeof source === 'object'
+    && source !== null
+    && Object.prototype.toString.call(source) !== '[object Array]';
 }
 
 var UNKNOWN = 'UNKNOWN';
