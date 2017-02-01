@@ -122,7 +122,7 @@ describe('LicenseBannerWebpackPlugin', function() {
       const compilerEnv = pluginEnvironment.getEnvironmentStub();
 
       const plugin = new LicenseBannerPlugin({
-        licenseTemplate: '@license $name $version $license $author $repository',
+        licenseTemplate: function(pkg) { return `@license ${pkg.name} ${pkg.version} ${pkg.license} ${pkg.author} ${pkg.repository}`; },
         licenseDirectories: [
           path.join(__dirname, './modules')
         ]

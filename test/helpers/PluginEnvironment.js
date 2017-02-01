@@ -1,3 +1,7 @@
+/**
+ * @see https://github.com/webpack/webpack/blob/master/test/helpers/PluginEnvironment.js
+ */
+
 module.exports = function PluginEnvironment() {
   var events = [];
 

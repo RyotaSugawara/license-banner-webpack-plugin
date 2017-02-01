@@ -23,12 +23,13 @@ function isObject(source) {
     && !isArray(source);
 }
 
-var UNKNOWN = 'UNKNOWN';
-var DEFAULT_LICENSE_TEMPLATE =
-`$name@$version
-  license: $license
-  author: $author
-  repository: $repository`;
+var DEFAULT_LICENSE_TEMPLATE = function(pkg) {
+  var text = `${pkg.name}@${pkg.version}`;
+  if (pkg.author) text += `\n  author: ${pkg.author}`;
+  if (pkg.license) text += `\n  license: ${pkg.license}`;
+  if (pkg.repository) text += `\n  repository: ${pkg.repository}`;
+  return text;
+}
 
 function getDefaultOptions() {
   return {
@@ -47,8 +48,8 @@ class LicenseBannerWebpackPlugin {
       throw new Error('LicenseBannerWebpackPlugin only takes an object argument.');
     if (options.licenseDirectories && !isArray(options.licenseDirectories))
       throw new Error('LicenseBannerWebpackPlugin options.licensePattern only takes Array.')
-    if (options.licenseTemplate && typeof options.licenseTemplate !== 'string')
-      throw new Error('LicenseBannerWebpackPlugin options.licenseTemplate only takes String.');
+    if (options.licenseTemplate && typeof options.licenseTemplate !== 'function')
+      throw new Error('LicenseBannerWebpackPlugin options.licenseTemplate only takes Function.');
     this.options = Object.assign(
       getDefaultOptions(),
       options
@@ -110,22 +111,17 @@ class LicenseBannerWebpackPlugin {
   getLicenseBanner(modules) {
     if (!modules.length) return Promise.resolve('');
     return Promise.all(
-      modules.map(module => this.getLicense(module))
-    ).then(licenses => {
-      return licenses
-        .map(license => this.getLicenseText(license))
+      modules.map(module => this.getLicensePackage(module))
+    ).then(packages => {
+      return packages
+        .map(pkg => this.getLicenseText(pkg))
         .join('\n');
     });
   }
 
-  getLicenseText(license) {
+  getLicenseText(pkg) {
     var { licenseTemplate } = this.options;
-    return licenseTemplate
-      .replace('$name', license.name)
-      .replace('$version', license.version)
-      .replace('$license', license.license)
-      .replace('$author', license.author)
-      .replace('$repository', license.repository);
+    return licenseTemplate(pkg);
   }
 
   getPackage(module) {
@@ -157,6 +153,7 @@ class LicenseBannerWebpackPlugin {
     };
   }
 
+  // TODO: support bower
   getBowerJsonPkg(dir) {
     var pkg = require(path.join(dir, 'bower.json'));
     return {
@@ -168,7 +165,7 @@ class LicenseBannerWebpackPlugin {
     };
   }
 
-  getLicense(module) {
+  getLicensePackage(module) {
     return this.getPackage(module)
       .then(pkg => {
         return {
@@ -181,10 +178,10 @@ class LicenseBannerWebpackPlugin {
       }).catch(() => {
         return {
           name: module.name,
-          version: UNKNOWN,
-          author: UNKNOWN,
-          license: UNKNOWN,
-          repository: UNKNOWN
+          version: null,
+          author: null,
+          license: null,
+          repository: null
         }
       });
   }
@@ -195,7 +192,7 @@ class LicenseBannerWebpackPlugin {
     } else if (typeof repository === 'string') {
       return repository;
     } else {
-      return UNKNOWN;
+      return null;
     }
   }
 
@@ -209,7 +206,7 @@ class LicenseBannerWebpackPlugin {
     } else if (typeof author === 'string') {
       return author;
     } else {
-      return UNKNOWN;
+      return null;
     }
   }
 }
