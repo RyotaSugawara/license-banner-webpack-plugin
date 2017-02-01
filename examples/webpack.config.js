@@ -18,7 +18,10 @@ module.exports = {
       }
     }),
     new LicenseBannerPlugin({
-      licenseTemplate: '$name@$version\n  repository: $repository\n  licenses: $license',
+      licenseTemplate: function(pkg) {
+        var text = `${pkg.name}@${pkg.version}`;
+        return text;
+      },
       licenseDirectories: [
         path.join(__dirname, '../node_modules')
       ]
