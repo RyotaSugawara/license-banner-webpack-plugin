@@ -104,6 +104,7 @@ describe('LicenseBannerWebpackPlugin', function() {
               text.should.be.String();
               text.should.match(/^\/\*\n/);
               text.should.match(/\*\/\n$/);
+              text.should.match(/@license-banner-plugin/);
               cb();
             });
           });
