@@ -33,7 +33,7 @@ var DEFAULT_LICENSE_TEMPLATE = function(pkg) {
 
 function getDefaultOptions() {
   return {
-    licensePattern: /node_modules/,
+    licensePattern: null,
     licenseTemplate: DEFAULT_LICENSE_TEMPLATE
   };
 }
@@ -47,7 +47,7 @@ class LicenseBannerWebpackPlugin {
     if (!isObject(options))
       throw new Error('LicenseBannerWebpackPlugin only takes an object argument.');
     if (options.licenseDirectories && !isArray(options.licenseDirectories))
-      throw new Error('LicenseBannerWebpackPlugin options.licensePattern only takes Array.')
+      throw new Error('LicenseBannerWebpackPlugin options.licenseDirectories only takes Array.')
     if (options.licenseTemplate && typeof options.licenseTemplate !== 'function')
       throw new Error('LicenseBannerWebpackPlugin options.licenseTemplate only takes Function.');
     this.options = Object.assign(
