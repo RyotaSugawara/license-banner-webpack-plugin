@@ -9,6 +9,8 @@ var fs = require('fs');
 var path = require('path');
 var ConcatSource = require('webpack-sources').ConcatSource;
 
+var PLUIN_IDENTIFY_STRING = '@license-banner-plugin'
+
 function uniqueModuleFilter(module, index, source) {
   return source.map(module => module.name).indexOf(module.name) === index;
 }
@@ -71,7 +73,7 @@ class LicenseBannerWebpackPlugin {
                 if (banner)
                   chunk.files.forEach(file => {
                     compilation.assets[file] = new ConcatSource(
-                      `/*\n${banner}\n*/\n`,
+                      `/*\n${PLUIN_IDENTIFY_STRING}\n${banner}\n*/\n`,
                       compilation.assets[file]
                     );
                   });
@@ -115,6 +117,7 @@ class LicenseBannerWebpackPlugin {
     ).then(packages => {
       return packages
         .map(pkg => this.getLicenseText(pkg))
+        .filter(text => !!text)
         .join('\n');
     });
   }
