@@ -14,7 +14,7 @@ $ npm install license-banner-webpack-plugin --save-dev
 Import the plugin module into webpack configuration.
 
 ```js
-const LicenseBannerPlugin = require('license-banner-webpack-pluin');
+const LicenseBannerPlugin = require('license-banner-webpack-plugin');
 ```
 
 Then use this plugin with some options.
