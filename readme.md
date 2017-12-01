@@ -51,6 +51,29 @@ new LicenseBannerPlugin(options);
 | `licenseTemplate(pkg)` | Function | license template pattern. argument `pkg` is each packages information object. you can use `pkg.name` `pkg.version` `pkg.author` `pkg.license` `pkg.repository`. |
 | `licenseDirectories`   | Array    | package modules directories. The default is node_modules directory.                                                                                             |
 
+### Removing all other comments
+
+If you want to remove all other comments, use `uglifyjs-webpack-plugin` instead of plugins in webpack.
+
+```bash
+$ npm install uglifyjs-webpack-plugin --save-dev
+```
+
+```js
+const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
+```
+
+and also you must be set behind UglifyJSPlugin.
+
+```js
+// ...
+  plugins: [
+    new UglifyJSPlugin(),
+    new LicenseBannerPlugin()
+  ]
+// ...
+```
+
 ## License
 [MIT](https://github.com/tcnksm/tool/blob/master/LICENCE)
 
