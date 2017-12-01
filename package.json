@@ -1,6 +1,6 @@
 {
   "name": "license-banner-webpack-plugin",
-  "version": "0.0.4",
+  "version": "1.0.0",
   "description": "append license banner to bundle file.",
   "main": "index.js",
   "scripts": {
