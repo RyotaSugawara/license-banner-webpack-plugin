@@ -1,5 +1,5 @@
 const path = require('path');
-const webpack = require('webpack');
+const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 const LicenseBannerPlugin = require('../');
 
 module.exports = {
@@ -12,16 +12,8 @@ module.exports = {
     path: __dirname + '/dest',
   },
   plugins: [
-    new webpack.optimize.UglifyJsPlugin({
-      compress: {
-        warnings: false
-      }
-    }),
+    new UglifyJsPlugin(),
     new LicenseBannerPlugin({
-      licenseTemplate: function(pkg) {
-        var text = `${pkg.name}@${pkg.version}`;
-        return text;
-      },
       licenseDirectories: [
         path.join(__dirname, '../node_modules')
       ]

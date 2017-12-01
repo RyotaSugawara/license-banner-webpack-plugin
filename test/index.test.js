@@ -73,7 +73,9 @@ describe('LicenseBannerWebpackPlugin', function() {
                 { resource: path.join(__dirname, '../node_modules/webpack/lib/AmdMainTemplatePlugin.js') }
               ], files: [
                 'test.js'
-              ] }
+              ], mapModules: function(iterator) {
+                return this.modules.map(iterator);
+              } }
             ];
           });
 
@@ -182,7 +184,9 @@ describe('LicenseBannerWebpackPlugin', function() {
                 { resource: path.join(__dirname, './modules/some-npm-pkg-3/index.js') }
               ], files: [
                 'test.js'
-              ] }
+              ], mapModules: function(iterator) {
+                return this.modules.map(iterator);
+              } }
             ];
           });
 

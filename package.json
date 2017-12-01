@@ -21,9 +21,11 @@
   "devDependencies": {
     "lodash": "^4.17.4",
     "mocha": "^3.2.0",
+    "react": "^16.2.0",
     "should": "^11.2.0",
     "sinon": "^1.17.7",
-    "webpack": "^2.2.1"
+    "uglifyjs-webpack-plugin": "^1.1.2",
+    "webpack": "^3.9.1"
   },
   "dependencies": {
     "webpack-sources": "^0.1.4"

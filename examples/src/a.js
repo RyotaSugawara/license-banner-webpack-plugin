@@ -1,3 +1,4 @@
 const _ = require('lodash');
+const react = require('react');
 
-_.VERSION;
+console.log(_.VERSION, react);

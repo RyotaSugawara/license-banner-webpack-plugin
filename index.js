@@ -90,7 +90,7 @@ class LicenseBannerWebpackPlugin {
   }
 
   getModuleMap(chunk, directories) {
-    return chunk.modules.map(module => {
+    return chunk.mapModules(module => {
       return module.resource || '';
     }).filter(resource => {
       for (var dir of directories)
