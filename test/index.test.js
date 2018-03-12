@@ -1,239 +1,115 @@
 "use strict";
 
 const path = require('path');
-const should = require('should'); // eslint-disable-line no-unused-vars
-const sinon = require('sinon');
-const ConcatSource = require('webpack-sources').ConcatSource;
-const LicenseBannerPlugin = require('../');
-const PluginEnvironment = require('./helpers/PluginEnvironment');
+const _ = require('lodash');
+const should = require('should');
+const webpack = require('webpack');
+const MemoryFileSystem = require('memory-fs');
+const plugin = require('../index.js');
+const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 
-describe('LicenseBannerWebpackPlugin', function() {
-  it('has apply function', () => {
-    (new LicenseBannerPlugin()).apply.should.be.a.Function();
+const OUTPUT_DIR = path.join(__dirname, './webpack-out');
+const REGEXP = /^\/\*\n@license-banner-plugin([\s\S])*?\*\//m;
+
+function configure(webpackOpts, opts = {}) {
+  return _.merge({
+    entry: {
+      test: path.join(__dirname, './fixtures/index.js')
+    },
+    output: {
+      path: OUTPUT_DIR,
+      filename: '[name].js'
+    },
+    plugins: [
+      new plugin(opts)
+    ]
+  }, webpackOpts);
+}
+
+function webpackCompile(webpackOtps, opts, callback) {
+  const config = configure(webpackOtps, opts);
+  const compiler = webpack(config);
+  const fs = compiler.outputFileSystem = new MemoryFileSystem();
+  compiler.run((err, stats) => {
+    should.not.exist(err);
+    should.notEqual(true, stats.hasErrors());
+    callback(stats, fs);
+  });
+}
+
+describe('LicenseBannerWebpackPlugin', () => {
+  it('exists', () => {
+    should.exist(plugin);
   });
 
-  describe('when applied with no options', () => {
-    let eventBindings;
-    let eventBinding;
-
-    beforeEach(() => {
-      const pluginEnvironment = new PluginEnvironment();
-      const compilerEnv = pluginEnvironment.getEnvironmentStub();
-      compilerEnv.context = path.join(__dirname, '..');
-
-      const plugin = new LicenseBannerPlugin();
-      plugin.apply(compilerEnv);
-      eventBindings = pluginEnvironment.getEventBindings();
-    });
-
-    it('binds one event handler', () => {
-      eventBindings.length.should.be.exactly(1);
-    });
-
-    describe('compilation handler', () => {
-      beforeEach(() => {
-        eventBinding = eventBindings[0];
-      });
-
-      it('bind to compilation event', () => {
-        eventBinding.name.should.be.exactly('compilation');
-      });
-
-      describe('when called', () => {
-        let chunkPluginEnvironment;
-        let compilationEventBindings;
-        let compilationEventBinding;
-        let compilation;
-        let callback;
-
-        beforeEach(() => {
-          chunkPluginEnvironment = new PluginEnvironment();
-          compilation = chunkPluginEnvironment.getEnvironmentStub();
-
-          compilation.assets = {
-            'test.js': {
-              _value: "require('webpack')"
-            }
-          };
-
-          eventBinding.handler(compilation);
-          compilationEventBindings = chunkPluginEnvironment.getEventBindings();
-        });
-
-        it('binds one event handler', () => {
-          compilationEventBindings.length.should.be.exactly(1);
-        });
-
-        describe('optimize-chunk-assets event', () => {
-          let chunks;
-          beforeEach(() => {
-            compilationEventBinding = compilationEventBindings[0];
-            chunks = [
-              { modules: [
-                { resource: path.join(__dirname, '../node_modules/webpack/lib/AmdMainTemplatePlugin.js') }
-              ], files: [
-                'test.js'
-              ], mapModules: function(iterator) {
-                return this.modules.map(iterator);
-              } }
-            ];
-          });
-
-          it('binds to optimize-chunk-assets event', () => {
-            compilationEventBinding.name.should.be.exactly('optimize-chunk-assets');
-          });
-
-          it('only call callback once', cb => {
-            callback = sinon.spy();
-            compilationEventBinding.handler(chunks, function() {
-              callback();
-              callback.calledOnce.should.be.exactly(true);
-              cb();
-            });
-          });
-
-          it('outputs ConcatSource', cb => {
-            compilationEventBinding.handler(chunks, () => {
-              var source = compilation.assets['test.js'];
-              source.should.be.instanceof(ConcatSource);
-              cb();
-            });
-          });
-
-          it('outputs template comment on ConcatSource.children[0]', cb => {
-            compilationEventBinding.handler(chunks, () => {
-              var text = compilation.assets['test.js'].children[0];
-              text.should.be.String();
-              text.should.match(/^\/\*\n/);
-              text.should.match(/\*\/\n$/);
-              text.should.match(/@license-banner-plugin/);
-              cb();
-            });
-          });
-        });
-
-      });
+  it('outputs license comment', (done) => {
+    webpackCompile({
+      mode: 'development',
+      plugins: [
+        new plugin()
+      ]
+    }, {}, (stats, fs) => {
+      for (const file in stats.compilation.assets) {
+        if (Object.prototype.hasOwnProperty.call(stats.compilation.assets, file)) {
+          const raw = stats.compilation.assets[file].source();
+          const comment = REGEXP.exec(raw)[0];
+          should.ok(REGEXP.test(raw));
+          should.ok(comment.includes('@license-banner-plugin'));
+          should.ok(comment.includes('lodash'));
+        }
+      }
+      done();
     });
   });
 
-  describe('when applied with options', () => {
-    let eventBindings;
-    let eventBinding;
-
-    beforeEach(() => {
-      const pluginEnvironment = new PluginEnvironment();
-      const compilerEnv = pluginEnvironment.getEnvironmentStub();
-
-      const plugin = new LicenseBannerPlugin({
-        licenseTemplate: function(pkg) { return `@license ${pkg.name} ${pkg.version} ${pkg.license} ${pkg.author} ${pkg.repository}`; },
-        licenseDirectories: [
-          path.join(__dirname, './modules')
-        ]
-      });
-      plugin.apply(compilerEnv);
-      eventBindings = pluginEnvironment.getEventBindings();
+  it('outputs license comment with module directory', (done) => {
+    webpackCompile({
+      mode: 'development',
+      plugins: [
+        new plugin({
+          licenseDirectories: [
+            path.join(__dirname, './modules')
+          ]
+        })
+      ]
+    }, {}, (stats, fs) => {
+      for (const file in stats.compilation.assets) {
+        if (Object.prototype.hasOwnProperty.call(stats.compilation.assets, file)) {
+          const raw = stats.compilation.assets[file].source();
+          const comment = REGEXP.exec(raw)[0];
+          should.ok(REGEXP.test(raw));
+          should.ok(comment.includes('@license-banner-plugin'));
+          // only show selected modules license
+          should.ok(comment.includes('some-npm-pkg'));
+          should.ok(comment.includes('some-npm-pkg-2'));
+          should.ok(comment.includes('some-npm-pkg-3'));
+        }
+      }
+      done();
     });
+  });
 
-    it('binds one event handler', () => {
-      eventBindings.length.should.be.exactly(1);
-    });
-
-    describe('compilation handler', () => {
-      beforeEach(() => {
-        eventBinding = eventBindings[0];
-      });
-
-      it('bind to compilation event', () => {
-        eventBinding.name.should.be.exactly('compilation');
-      });
-
-      describe('when called', () => {
-        let chunkPluginEnvironment;
-        let compilationEventBindings;
-        let compilationEventBinding;
-        let compilation;
-        let callback;
-
-        beforeEach(() => {
-          chunkPluginEnvironment = new PluginEnvironment();
-          compilation = chunkPluginEnvironment.getEnvironmentStub();
-
-          compilation.assets = {
-            'test.js': {
-              _value: "require('webpack')"
-            }
-          };
-
-          eventBinding.handler(compilation);
-          compilationEventBindings = chunkPluginEnvironment.getEventBindings();
-        });
-
-        it('binds one event handler', () => {
-          compilationEventBindings.length.should.be.exactly(1);
-        });
-
-        describe('optimize-chunk-assets event', () => {
-          let chunks;
-          beforeEach(() => {
-            compilationEventBinding = compilationEventBindings[0];
-            chunks = [
-              { modules: [
-                { resource: path.join(__dirname, '../node_modules/webpack/lib/AmdMainTemplatePlugin.js') },
-                { resource: path.join(__dirname, './modules/some-npm-pkg/index.js') },
-                { resource: path.join(__dirname, './modules/some-npm-pkg-2/index.js') },
-                { resource: path.join(__dirname, './modules/some-npm-pkg-3/index.js') }
-              ], files: [
-                'test.js'
-              ], mapModules: function(iterator) {
-                return this.modules.map(iterator);
-              } }
-            ];
-          });
-
-          it('binds to optimize-chunk-assets event', () => {
-            compilationEventBinding.name.should.be.exactly('optimize-chunk-assets');
-          });
-
-          it('only call callback once', cb => {
-            callback = sinon.spy();
-            compilationEventBinding.handler(chunks, function() {
-              callback();
-              callback.calledOnce.should.be.exactly(true);
-              cb();
-            });
-          });
-
-          it('outputs ConcatSource', cb => {
-            compilationEventBinding.handler(chunks, () => {
-              const source = compilation.assets['test.js'];
-              source.should.be.instanceof(ConcatSource);
-              cb();
-            });
-          });
-
-          it('outputs contaions a selected modules folder’s license', cb => {
-            compilationEventBinding.handler(chunks, () => {
-              const text = compilation.assets['test.js'].children[0];
-              let pkg = require('./modules/some-npm-pkg/package.json');
-              let pkg2 = require('./modules/some-npm-pkg-2/package.json');
-              let pkg3 = require('./modules/some-npm-pkg-3/package.json');
-              text.should.containEql(`@license ${pkg.name} ${pkg.version} ${pkg.license} ${pkg.author} ${pkg.repository}`);
-              text.should.containEql(`@license ${pkg2.name} ${pkg2.version} ${pkg2.license} ${pkg2.author.name} <${pkg2.author.email}> (${pkg2.author.url}) ${pkg2.repository}`);
-              text.should.containEql(`@license ${pkg3.name} ${pkg3.version} ${pkg3.license} ${pkg3.author} ${pkg3.repository.url}`);
-              cb();
-            });
-          });
-
-          it('outputs do not contaions a unselected modules folder’s license', cb => {
-            compilationEventBinding.handler(chunks, () => {
-              const text = compilation.assets['test.js'].children[0];
-              text.should.not.containEql('@license webpack');
-              cb();
-            });
-          });
-        });
-
-      });
+  it('outputs license comment with uglify plugin', (done) => {
+    webpackCompile({
+      mode: 'production',
+      optimization: {
+        minimize: false
+      },
+      plugins: [
+        new UglifyJsPlugin(),
+        new plugin()
+      ]
+    }, {}, (stats, fs) => {
+      for (const file in stats.compilation.assets) {
+        if (Object.prototype.hasOwnProperty.call(stats.compilation.assets, file)) {
+          const raw = stats.compilation.assets[file].source();
+          const comment = REGEXP.exec(raw)[0];
+          should.ok(REGEXP.test(raw));
+          should.ok(comment.includes('@license-banner-plugin'));
+        }
+      }
+      done();
     });
   });
 });
+
