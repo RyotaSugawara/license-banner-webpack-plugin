@@ -74,6 +74,21 @@ and also you must be set behind UglifyJSPlugin.
 // ...
 ```
 
+### production mode (at webpack v4)
+
+`mode` option has added from webpack v4.
+
+If you use `production` mode and also want to use license-banner-webpack-plugin, you must set `optimization.minimize` option to `false`.
+
+```js
+// ...
+  mode: 'production',
+  optimization: {
+    minimize: false
+  }
+// ...
+```
+
 ## License
 [MIT](https://github.com/tcnksm/tool/blob/master/LICENCE)
 

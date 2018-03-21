@@ -62,35 +62,43 @@ class LicenseBannerWebpackPlugin {
     var directories = this.options.licenseDirectories || [
       path.join(compiler.context, 'node_modules')
     ];
-    compiler.plugin('compilation', compilation => {
-      compilation.plugin('optimize-chunk-assets', (chunks, callback) => {
 
-        Promise.all(
-          chunks.map(chunk => {
-            var modules = this.getModuleMap(chunk, directories);
-            return this.getLicenseBanner(modules)
-              .then(banner => {
-                if (banner)
-                  chunk.files.forEach(file => {
-                    compilation.assets[file] = new ConcatSource(
-                      `/*\n${PLUIN_IDENTIFY_STRING}\n${banner}\n*/\n`,
-                      compilation.assets[file]
-                    );
-                  });
-              });
-          })
-        ).then(() => {
-          callback();
-        }, err => {
-          callback(err);
-        });
-
+    var optimizeChunkAssets = (compilation, chunks, callback) => {
+      Promise.all(
+        chunks.map(chunk => {
+          var modules = this.getModuleMap(chunk, directories);
+          return this.getLicenseBanner(modules)
+            .then(banner => {
+              if (banner)
+                chunk.files.forEach(file => {
+                  compilation.assets[file] = new ConcatSource(
+                    `/*\n${PLUIN_IDENTIFY_STRING}\n${banner}\n*/\n`,
+                    compilation.assets[file]
+                  );
+                });
+            });
+        })
+      ).then(() => {
+        callback();
+      }, err => {
+        callback(err);
       });
-    });
+    };
+
+    if (compiler.hooks) {
+      const plugin = { name: 'LicenseBannerWebpackPlugin' };
+      compiler.hooks.compilation.tap(plugin, compilation => {
+        compilation.hooks.optimizeChunkAssets.tapAsync(plugin, optimizeChunkAssets.bind(this, compilation));
+      });
+    } else {
+      compiler.plugin('compilation', compilation => {
+        compilation.plugin('optimize-chunk-assets', optimizeChunkAssets.bind(this, compilation));
+      });
+    }
   }
 
   getModuleMap(chunk, directories) {
-    return chunk.mapModules(module => {
+    return Array.from(chunk.modulesIterable, module => {
       return module.resource || '';
     }).filter(resource => {
       for (var dir of directories)
