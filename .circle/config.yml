@@ -1,0 +1,29 @@
+version: 2
+jobs:
+  build_test:
+    working_directory: ~/workspace
+    docker:
+      - image: circleci/node:10.7.0
+    steps:
+      - checkout
+      - restore_cache:
+          key: npm-dependency-cache-{{ checksum "package.json" }}
+      - run:
+          name: npm-install
+          command: npm install
+      - save_cache:
+          key: npm-dependency-cache-{{ checksum "package.json" }}
+          paths:
+            - ./node_modules
+      - run:
+          name: build
+          command: npm run build
+      - run:
+          name: test
+          command: |
+            npm test
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build_test
