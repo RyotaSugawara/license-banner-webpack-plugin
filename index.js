@@ -107,7 +107,7 @@ class LicenseBannerWebpackPlugin {
     }).map(resource => {
       for (var dir of directories) {
         if (resource.startsWith(dir)) {
-          var name = resource.replace(dir, '').split('/')[1];
+          var name = resource.replace(dir, '').split(path.sep)[1];
           var directory = path.join(dir, name)
           return {
             name,
@@ -223,4 +223,3 @@ class LicenseBannerWebpackPlugin {
 }
 
 module.exports = LicenseBannerWebpackPlugin;
-
